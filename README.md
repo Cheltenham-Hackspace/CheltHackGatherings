@@ -48,7 +48,7 @@ Visit the homepage of the site (once it is live)
 ![Homepage](http://i.imgur.com/lit8TSZ.png)
 
 Click the Gatherings dropdown and click register
-![Dropdown](http://i.imgur.com/n4g7Qoh.png)
+![Dropdown](http://i.imgur.com/n4g7Qoh.png?1)
 
 Fill out the application form
 ![Application Form](http://i.imgur.com/wQvoKCI.png)
@@ -57,7 +57,7 @@ Ask an admin to activate your account until we get email activation working.
 
 ### RSVP-ing
 If you are not already logged in then click Gatherings > Login
-![Login](http://i.imgur.com/pKs8Th6.png)
+![Login](http://i.imgur.com/pKs8Th6.png?1)
 
 Log in with your account (See [Registration](#Registration))
 ![Login](http://i.imgur.com/LXyfa84.png)
