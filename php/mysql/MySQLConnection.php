@@ -35,6 +35,17 @@ class MySQLConnection
         $this->timeout = $timeout;
     }
 
+    /**
+     * @var string $depthToGlobal The string of ../ that it takes to reach the global folder (containing php/, pages/
+     * etc..
+     * @return MySQLConnection
+     */
+    public static function createDefault($depthToGlobal)
+    {
+        $dbDetails = SecurityUtils::getDatabaseDetails($depthToGlobal);
+        return new MySQLConnection($dbDetails[0], $dbDetails[1], $dbDetails[2], $dbDetails[3]);
+    }
+
     public function connect()
     {
         try{
@@ -60,11 +71,6 @@ class MySQLConnection
         }catch (Exception $e){
             return array(false, $this->getErrorCodes()["ERR_TIME_OUT"], "Error - connection timed out.");
         }
-    }
-
-    public function disconnect()
-    {
-        return $this->getMysqli()->close();
     }
 
     /**
@@ -164,38 +170,6 @@ class MySQLConnection
     }
 
     /**
-     * @return mysqli
-     */
-    public function getMysqli()
-    {
-        return $this->mysqli;
-    }
-
-    /**
-     * @param mixed $mysqli
-     */
-    public function setMysqli($mysqli)
-    {
-        $this->mysqli = $mysqli;
-    }
-
-    /**
-     * @return mixed
-     */
-    public function getConnected()
-    {
-        return $this->connected;
-    }
-
-    /**
-     * @param mixed $connected
-     */
-    public function setConnected($connected)
-    {
-        $this->connected = $connected;
-    }
-
-    /**
      * @return array
      */
     public function getErrorCodes()
@@ -211,6 +185,26 @@ class MySQLConnection
         $this->errorCodes = $errorCodes;
     }
 
+    public function disconnect()
+    {
+        return $this->getMysqli()->close();
+    }
+
+    /**
+     * @return mysqli
+     */
+    public function getMysqli()
+    {
+        return $this->mysqli;
+    }
+
+    /**
+     * @param mixed $mysqli
+     */
+    public function setMysqli($mysqli)
+    {
+        $this->mysqli = $mysqli;
+    }
 
     /**
      * @param $id
@@ -240,6 +234,22 @@ class MySQLConnection
 
         $record = $rows->fetch_array(MYSQLI_BOTH);
         return array(true, 200, "Success", $record['hash']);
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getConnected()
+    {
+        return $this->connected;
+    }
+
+    /**
+     * @param mixed $connected
+     */
+    public function setConnected($connected)
+    {
+        $this->connected = $connected;
     }
 
 

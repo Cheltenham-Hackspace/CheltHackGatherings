@@ -101,8 +101,7 @@ if($_SESSION['agent'] != $_SERVER['HTTP_USER_AGENT']){
     // extension they will have to re-login.
 }
 //Connect to the database
-$mysqlConnection = new MySQLConnection("vit-mysql.ddns.net", "chelthacktesting",
-    "remote_admin", "S*@qEnl6k2HpoVvyRqYeNA@4Tp8TXm");
+$mysqlConnection = MySQLConnection::createDefault("../../");
 $connectionResult = $mysqlConnection->connect();
 
 //Verify that we connected successfully.

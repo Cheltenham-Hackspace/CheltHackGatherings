@@ -59,8 +59,7 @@ if(!isset($_SESSION['user-id']) && !isset($_SESSION['agent']) && !isset($_SESSIO
 }
 
 //Connect to the database
-$mysqlConnection = new GatheringMySQLConnection("vit-mysql.ddns.net", "chelthacktesting",
-    "remote_admin", "S*@qEnl6k2HpoVvyRqYeNA@4Tp8TXm");
+$mysqlConnection = GatheringMySQLConnection::createDefault("../../");
 $connectionResult = $mysqlConnection->connect();
 
 if (!$connectionResult[0]) {

@@ -36,7 +36,8 @@ if(!isset($_POST['event-id'])){
     return;
 }
 
-$mysqlConnection = new GatheringMySQLConnection("vit-mysql.ddns.net", "chelthacktesting", "remote_admin", "S*@qEnl6k2HpoVvyRqYeNA@4Tp8TXm");
+/** @var GatheringMySQLConnection $mysqlConnection */
+$mysqlConnection = GatheringMySQLConnection::createDefault("../../");
 $mysqlConnection->connect();
 
 $userIdRequest = User::getUserID($_SESSION['user'], $mysqlConnection);

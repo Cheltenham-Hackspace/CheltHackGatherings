@@ -102,8 +102,7 @@
     include_once("../../res/libraries/Michelf/Markdown.inc.php");
 
     //Connect to the database with a GatheringMySQLConnection so we can access the Gathering exclusive methods.
-    $mySQLConnection = new GatheringMySQLConnection("vit-mysql.ddns.net",
-        "chelthacktesting", "remote_admin", "S*@qEnl6k2HpoVvyRqYeNA@4Tp8TXm");
+    $mysqlConnection = GatheringMySQLConnection::createDefault("../../");
     //Then connect to the database.
     $connectionResult = $mySQLConnection->connect();
 

@@ -46,7 +46,7 @@ if(
     return;
 }
 
-$mysqlConnection = new GatheringMySQLConnection("vit-mysql.ddns.net", "chelthacktesting", "remote_admin", "S*@qEnl6k2HpoVvyRqYeNA@4Tp8TXm");
+$mysqlConnection = GatheringMySQLConnection::createDefault("../../../");
 $mysqlConnection->connect();
 
 $userIdRequest = User::getUserID($_SESSION['user'], $mysqlConnection);

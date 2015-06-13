@@ -29,7 +29,7 @@ $username = $_POST['username'];
 $password = $_POST['password'];
 
 //Connect to the MySQL server.
-$mysqlConnection = new MySQLConnection("vit-mysql.ddns.net", "chelthacktesting", "remote_admin", "S*@qEnl6k2HpoVvyRqYeNA@4Tp8TXm");
+$mysqlConnection = MySQLConnection::createDefault("../../");
 $connectionResult = $mysqlConnection->connect();
 
 if(!$connectionResult[0]){

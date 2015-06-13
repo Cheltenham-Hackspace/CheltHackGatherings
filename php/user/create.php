@@ -16,7 +16,7 @@ include_once("../../res/libraries/Michelf/Markdown.inc.php");
 
 //region MySQL Connection creation and connection.
 //Connect to the MySQL server.
-$mysqlConnection = new MySQLConnection("vit-mysql.ddns.net", "chelthacktesting", "remote_admin", "S*@qEnl6k2HpoVvyRqYeNA@4Tp8TXm");
+$mysqlConnection = MySQLConnection::createDefault("../../");
 $connectionResult = $mysqlConnection->connect();
 
 //Check if the connection was a success

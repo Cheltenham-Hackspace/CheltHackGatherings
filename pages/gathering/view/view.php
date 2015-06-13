@@ -106,7 +106,7 @@
                 include_once("../../../php/security/SecurityUtils.php");
                 include_once("../../../res/libraries/Michelf/Markdown.inc.php");
 
-                $mysqlConnection = new GatheringMySQLConnection("vit-mysql.ddns.net", "chelthacktesting", "remote_admin", "S*@qEnl6k2HpoVvyRqYeNA@4Tp8TXm");
+                $mysqlConnection = GatheringMySQLConnection::createDefault("../../../");
                 $mysqlConnection->connect();
 
                 $queryRequest =Gathering::doesGatheringExist($_GET['id'], $mysqlConnection);
