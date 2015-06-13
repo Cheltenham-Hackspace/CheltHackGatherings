@@ -1,0 +1,28 @@
+.details-text{
+    display: inline-block;
+}
+
+.details-header{
+    font-weight: bold;
+}
+
+.attendees-container{
+    margin-left: 15px;
+}
+
+.attendees-user-profile{
+    display: inline-block;
+    width: 40px;
+    height: 40px;
+
+    border-radius: 10px;
+    border: 1px solid #f6f6f6;
+}
+
+.attendees-user-name{
+    display: inline-block;
+}
+
+.details-div.organize{
+    margin-left: 15px;
+}

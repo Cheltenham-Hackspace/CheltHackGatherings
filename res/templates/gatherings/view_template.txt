@@ -1,0 +1,51 @@
+<section %DIS_CLASS%>
+
+    <h3>Gathering: %NAME% %DIS%</h3>
+    <div class="details-div">
+        <i class="details-box fa fa-globe"></i>
+        <p class="details-text">%LOCATION%</p>
+    </div>
+
+    <div class="details-div">
+        <i class="details-box fa fa-calendar calendar"></i>
+        <p class="details-text">%DATE%</p>
+    </div>
+
+    <div class="details-div">
+        <i class="details-box fa fa-clock-o"></i>
+        <p class="details-text">%TIME%</p>
+    </div>
+
+    <hr>
+
+    <div class="details-div">
+        <p class="details-text det-desc">%DESC%</p>
+    </div>
+
+    <hr>
+
+    <div class="attendees-container">
+        <p class="details-header">Attending:</p>
+        %ATTENDEE_DATA%
+    </div>
+
+    <hr>
+
+    <div class="attendees-container">
+        <p class="details-header">Not attending:</p>
+        %NOT_ATTENDEE_DATA%
+    </div>
+
+    <hr>
+
+    <div class="details-div organize">
+        <p class="details-header">Organized by:</p>
+        <div class="attendees-item">
+            <a href="../../user/user.php?name=%ORG%">
+                <img src="%ORG_IMAGE%" class="attendees-user-profile">
+            </a>
+            <p class="attendees-user-name">%ORG_NAME%</p>
+        </div>
+    </div>
+
+</section>

@@ -1,0 +1,19 @@
+<li class="dropdown">
+    <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+        Gatherings
+        <span class="caret"></span>
+    </a>
+    <ul class="dropdown-menu">
+        <li>
+            <a href="/CHG/pages/gathering/gathering.php">Browse</a>
+        </li>
+
+        <li>
+            <a href="/CHG/pages/login/login.php">Login</a>
+        </li>
+
+        <li>
+            <a href="/CHG/pages/gathering/edit/create.php">Create</a>
+        </li>
+    </ul>
+</li>

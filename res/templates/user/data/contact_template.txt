@@ -1,0 +1,6 @@
+<div class="user-contact-group">
+    <p class="panel-heading data-heading">Contact me!</p>
+    <div class="user-contact-data">
+        %DATA%
+    </div>
+</div>

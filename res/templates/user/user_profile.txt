@@ -1,0 +1,17 @@
+<h3>User profile for %NAME%</h3>
+
+<div class="heading-area">
+    <img src="%HEADER%" class="user-profile-header">
+    <img src="%PROFILE%" class="user-profile-image">
+
+    <p class="user-name-full">%FULL-NAME%</p>
+</div>
+
+<div class="spacer"></div>
+<hr>
+
+%DESCRIPTIONS%
+
+<hr>
+
+%CONTACT%

@@ -1,0 +1,54 @@
+.user-profile-image{
+    border-radius: 30px;
+    border: 7px solid #e4e4e4;
+
+    width: 20%;
+    height: auto;
+
+    position: absolute;
+    top: 18%;
+    left: 5%;
+}
+
+.user-profile-header{
+    width: 100%;
+    height: auto;
+
+}
+
+.user-name-full{
+    margin-left: 27%;
+    padding-top: 2%;
+    position: absolute;
+
+    font-weight: bold;
+    font-size: 1.5em;
+}
+
+.spacer{
+    height: 85px;
+}
+
+.data-heading{
+    font-weight: 600;
+}
+
+.user-data{
+    margin-left: 30px;
+
+    background-color: #3b3b3b;
+    color: #ffffff;
+
+    border-radius: 10px;
+    padding-left: 10px;
+    padding-top: 10px;
+    padding-bottom: 2px;
+}
+
+.user-contact-data{
+    margin-left: 30px;
+}
+
+.user-contact-detail{
+    margin-left: 10px !important;
+}

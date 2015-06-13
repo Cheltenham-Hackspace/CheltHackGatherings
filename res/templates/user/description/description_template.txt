@@ -1,0 +1,4 @@
+<div class="user-data-group">
+    <p class="panel-heading data-heading">%QUESTION%</p>
+    <div class="user-data">%DESC%</div>
+</div>

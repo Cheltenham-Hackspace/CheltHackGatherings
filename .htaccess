@@ -1,0 +1,2 @@
+ErrorDocument 404 /CHG/pages/error/404.html
+ErrorDocument 403 /CHG/pages/error/403.html

@@ -1,0 +1,5 @@
+<a href="#" class="list-group-item">
+    <i class="fa %ICON% fa-fw"></i> %TITLE%
+    <span class="pull-right text-muted small"><em>%TIME%</em>
+    </span>
+</a>

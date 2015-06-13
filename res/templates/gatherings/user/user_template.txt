@@ -1,0 +1,6 @@
+<div class="attendees-item">
+    <a href="%USER_ADDRESS%">
+        <img src="%IMAGE%" class="attendees-user-profile">
+    </a>
+    <p class="attendees-user-name">%USERNAME%</p>
+</div>

@@ -1,0 +1,2 @@
+<p class="data-heading">%TYPE%:</p>
+<p class="user-contact-detail user-data">%DATA%</p>

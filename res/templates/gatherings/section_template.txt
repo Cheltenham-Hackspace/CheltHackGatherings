@@ -1,0 +1,49 @@
+<section %DIS_CLASS%>
+    <h3><a class="gathering-link" href="view/view.php?id=%EVENT_ID%">%NAME% %DIS%</a></h3>
+
+    <div class="details-div">
+        <i class="details-box fa fa-globe"></i>
+        <p class="details-text">%LOCATION%</p>
+    </div>
+
+    <div class="details-div">
+        <i class="details-box fa fa-calendar"></i>
+        <p class="details-text">%DATE%</p>
+    </div>
+
+    <div class="details-div">
+        <i class="details-box fa fa-clock-o"></i>
+        <p class="details-text">%TIME%</p>
+    </div>
+
+    <hr>
+
+    <p>
+        %DESCRIPTION%
+    </p>
+
+    <hr>
+
+    <p id="rsvp-closing-1" class="details-header">RSVP Closing</p>
+    <p id="hour-close-1">%HOUR_CLOSE%</p>
+
+    <p id="attending-1" class="details-header">Attending</p>
+    <p id="attendees-1">The following people are attending the event. Click their profile image to find out more about them.</p>
+
+    <div class="attendees-container">
+        %USER_DATA%
+    </div>
+
+    <hr>
+
+    <form method="post" %DIS_BOOL% action="../../php/rsvp/rsvp.php">
+        <button type="submit" %DIS_BOOL% class="btn btn-block btn-success rsvp-button" name="Attending">RSVP Going</button>
+        <input type="hidden" name="event-id" value="%EVENT_ID%">
+    </form>
+
+    <form method="post" action="../../php/rsvp/rsvp.php">
+        <button type="submit" %DIS_BOOL% class="btn btn-block btn-danger rsvp-button" name="NotAttending">RSVP Not going</button>
+        <input type="hidden" name="event-id" value="%EVENT_ID%">
+    </form>
+
+</section>
