@@ -41,6 +41,7 @@ This repo does not contain a couple of files. This means that you cannot clone i
 - [ ] Add email announcements
 - [ ] Add timeline table in Admin Console
 - [ ] Add notifications in Admin Console
+- [ ] Commenting section on gathering.
 
 ## How to use
 ### Registration
