@@ -6,7 +6,7 @@
  * Time: 21:11
  */
 
-include_once("../../res/libraries/vendor/autoload.php");
+include_once("../../res/libraries/vendor/google/apiclient/src/Google/autoload.php");
 
 /**
  * This function will generate an authenticated google client with the given scopes.
@@ -100,7 +100,6 @@ function getCalendarEventsCount(){
  */
 function getCalendarEventsString($fileDepth){
     $client = getGoogleClient(array(Google_Service_Calendar::CALENDAR_READONLY));
-
     //Create the calendar service off out google client
     $calendar = new Google_Service_Calendar($client);
     //And list the events
