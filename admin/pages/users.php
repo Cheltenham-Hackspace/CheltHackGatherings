@@ -266,8 +266,7 @@ function redirect($error, $address = "../../pages/login/login.php", $replace = t
                                     $fullName = $record['name_first'] . " " . $record['name_middle'] . " " .
                                         $record['name_last'];
                                     echo "<td>" . $fullName . "</td>";
-                                    echo "<td>" . SecurityUtils::deobfuscateStringComplete($record['contact_email'],
-                                            $record['username'], $record['name_first'], $record['name_last']) . "</td>";
+                                    echo "<td>" . SecurityUtils::deobfuscateString($record['contact_email']) . "</td>";
                                     echo "<td>" . $record['active'] . "</td>";
                                     echo "</tr>";
                                 }
@@ -292,7 +291,7 @@ function redirect($error, $address = "../../pages/login/login.php", $replace = t
                     </div>
                     <!-- /.panel-heading -->
                     <div class="panel-body">
-                        <form method="post" action="../../php/user/create.php">
+                        <form method="post" action="../../api/calls/user/registration/register-user.php">
 
                             <!-- Nav tabs -->
                             <ul class="nav nav-tabs" role="tablist" style="margin-bottom: 20px;">
