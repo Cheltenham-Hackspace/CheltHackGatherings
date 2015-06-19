@@ -104,7 +104,7 @@
     //Connect to the database with a GatheringMySQLConnection so we can access the Gathering exclusive methods.
     $mysqlConnection = GatheringMySQLConnection::createDefault("../../");
     //Then connect to the database.
-    $connectionResult = $mySQLConnection->connect();
+    $connectionResult = $mysqlConnection->connect();
 
     if(!$connectionResult[0]){
         echo "<section>";
@@ -115,7 +115,7 @@
 
     //Put in a request for all the gatherings in the database. We have to do it like this so we can pass objects, codes
     //and errors between methods.
-    $gatheringResult = $mySQLConnection->getAllGatherings();
+    $gatheringResult = $mysqlConnection->getAllGatherings();
 
     //if the request failed
     if (!$gatheringResult[0]) {
@@ -158,7 +158,7 @@
     //Check whether the user is logged in using the variable we just set
     if($userLoggedIn){
         //If they are the put in a request for their user ID.
-        $userIdRequest = User::getUserID($_SESSION['user'], $mySQLConnection);
+        $userIdRequest = User::getUserID($_SESSION['user'], $mysqlConnection);
         //If there was an error getting their user ID from the user name then log them out by clearing the login based
         //session variables.
         if(!$userIdRequest[0]){

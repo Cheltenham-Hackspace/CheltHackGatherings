@@ -11,6 +11,17 @@ include("MySQLConnection.php");
 class GatheringMySQLConnection extends MySQLConnection
 {
 
+    /**
+     * @var string $depthToGlobal The string of ../ that it takes to reach the global folder (containing php/, pages/
+     * etc..
+     * @return GatheringMySQLConnection
+     */
+    public static function createDefault($depthToGlobal)
+    {
+        $dbDetails = SecurityUtils::getDatabaseDetails($depthToGlobal);
+        return new GatheringMySQLConnection($dbDetails[0], $dbDetails[1], $dbDetails[2], $dbDetails[3]);
+    }
+
     public function getAllGatherings(){
         //If we are not currently connected to a database
         if (!$this->getConnected()) {
@@ -104,6 +115,62 @@ class GatheringMySQLConnection extends MySQLConnection
         return array(true, 200, "Success");
     }
 
+    /**
+     * This method will add the given array of attendees to the already existing array of attendees obtained through
+     * {@link GatheringMySQLConnection::getAttendees()}.
+     * @param $gatheringId int: The ID for the gathering in the database.
+     * @param $newAttendees array: The array of User IDs to add to the list of attendees.
+     * @return array array array(bool, int, string):
+     * <ul>
+     *   <li>
+     *       <strong>bool</strong>: Success
+     *   </li>
+     *   <li>
+     *       <strong>int</strong>: Error Code (200 on success)
+     *   </li>
+     *   <li>
+     *       <strong>string</strong>: Error message ('Success' on success)
+     *   </li>
+     * </ul>
+     */
+    public function addAttendees($gatheringId, $newAttendees)
+    {
+        //If we are not currently connected to a database
+        if (!$this->getConnected()) {
+            //Then return an error using the error code for not being connected.
+            return array(false, $this->getErrorCodes()["ERR_NOT_CONNECTED"], "Not connected");
+        }
+
+        //Create the update statement.
+        $update = "UPDATE `gatherings` SET
+	                  `attending` = ?
+                    WHERE `id`=?";
+        //Merge the two arrays.
+        $attendeesArray = array_merge($this->getAttendees($gatheringId)[3], $newAttendees);
+
+        //Prepare the statement using the connected copy of mysqli
+        $preparedStatement = mysqli_prepare($this->getMysqli(), $update);
+        //Bind the parameters in the order they are listed in $update
+        $implodedData = implode(',', $attendeesArray);
+        if (strlen($implodedData) > 0) {
+            if (substr($implodedData, 0, 1) == ",") {
+                $implodedData = substr($implodedData, 1);
+            }
+        }
+        $preparedStatement->bind_param("si", $implodedData, $gatheringId);
+
+        //Execute the query and store the result in $result
+        $result = $preparedStatement->execute();
+
+        //If the result was false (The insert failed)
+        if (!$result) {
+            //Then return false with the prepared statements error and errno
+            return array(false, $preparedStatement->errno, $preparedStatement->error);
+        }
+
+        //Otherwise return true with a success message.
+        return array(true, 200, "Success");
+    }
 
     /**
      * This method will retrieve the list of attendees for the given gathering in an int array
@@ -165,63 +232,6 @@ class GatheringMySQLConnection extends MySQLConnection
 
         //Otherwise return true with a success message.
         return array(true, 200, "Success", $arrayResponse);
-    }
-
-
-    /**
-     * This method will add the given array of attendees to the already existing array of attendees obtained through
-     * {@link GatheringMySQLConnection::getAttendees()}.
-     * @param $gatheringId int: The ID for the gathering in the database.
-     * @param $newAttendees array: The array of User IDs to add to the list of attendees.
-     * @return array array array(bool, int, string):
-     * <ul>
-     *   <li>
-     *       <strong>bool</strong>: Success
-     *   </li>
-     *   <li>
-     *       <strong>int</strong>: Error Code (200 on success)
-     *   </li>
-     *   <li>
-     *       <strong>string</strong>: Error message ('Success' on success)
-     *   </li>
-     * </ul>
-     */
-    public function addAttendees($gatheringId, $newAttendees){
-        //If we are not currently connected to a database
-        if (!$this->getConnected()) {
-            //Then return an error using the error code for not being connected.
-            return array(false, $this->getErrorCodes()["ERR_NOT_CONNECTED"], "Not connected");
-        }
-
-        //Create the update statement.
-        $update = "UPDATE `gatherings` SET
-	                  `attending` = ?
-                    WHERE `id`=?";
-        //Merge the two arrays.
-        $attendeesArray = array_merge($this->getAttendees($gatheringId)[3], $newAttendees);
-
-        //Prepare the statement using the connected copy of mysqli
-        $preparedStatement = mysqli_prepare($this->getMysqli(), $update);
-        //Bind the parameters in the order they are listed in $update
-        $implodedData = implode(',', $attendeesArray);
-        if(strlen($implodedData) > 0){
-            if(substr($implodedData, 0, 1) == ","){
-                $implodedData = substr($implodedData, 1);
-            }
-        }
-        $preparedStatement->bind_param("si", $implodedData, $gatheringId);
-
-        //Execute the query and store the result in $result
-        $result = $preparedStatement->execute();
-
-        //If the result was false (The insert failed)
-        if (!$result) {
-            //Then return false with the prepared statements error and errno
-            return array(false, $preparedStatement->errno, $preparedStatement->error);
-        }
-
-        //Otherwise return true with a success message.
-        return array(true, 200, "Success");
     }
 
     /**
