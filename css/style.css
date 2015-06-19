@@ -73,3 +73,27 @@ img.main-logo{
     width: 50px;
     height: 50px;
 }
+
+.ui-state-success, .ui-widget-content .ui-state-success, .ui-widget-header .ui-state-success {
+    border: 1px solid #005311;
+    background: #006615 url("../res/libraries/jquery-ui-1.11.4.custom/images/ui-bg_diagonals-thick_18_006615_40x40.png") 50% 50% repeat;
+    color: #fff
+}
+
+.ui-para-text {
+    margin-top: 5px;
+    margin-left: 10px;
+}
+
+.ui-widget {
+    margin-bottom: 10px;
+}
+
+.ui-icon .ui-icon-alert {
+    margin-top: 2px;
+}
+
+span.ui-icon.ui-icon-alert {
+    float: left;
+    margin-right: .3em;
+}
