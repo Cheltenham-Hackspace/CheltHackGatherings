@@ -67,11 +67,18 @@ $isValidPassword = validate_password($password, $hash);
 
 //If it was
 if($isValidPassword){
-    if(!$user->isActive()){
+    if ($user->getActive() == 0) {
         redirect("Your account has been deactivated. If you have just registered check your email to finish the
         registration. Otherwise contact an admin about getting your account reinstated.");
         return;
     }
+    if ($user->getActive() == 2) {
+        redirect("Your account is currently deactivated. To enable your account click the link in the email that
+        should have been sent to you when you signed up. If you didn't recieve an email check your spam folder or
+        contact a site admin.");
+        return;
+    }
+
     //Then set the user of the session to their username
     $_SESSION['user'] = $username;
     //Store the user ID as we use that more often as well
