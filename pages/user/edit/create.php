@@ -83,12 +83,13 @@
                         {
                             session_start();
                             if (isset($_SESSION['user-id']) && isset($_SESSION['agent']) && isset($_SESSION['count']) &&
-                                isset($_SESSION['user']) && isset($_SESSION['admin'])) {
+                                isset($_SESSION['user']) && isset($_SESSION['admin'])
+                            ) {
                                 echo "<li><a href='#' id='logout'>Logout</a></li>";
                                 echo "<li><a href='../../gathering/edit/create.php'>Create</a></li>";
-                                if($_SESSION['admin'])echo "<li class='divider'></li><li><a href='../../../admin/pages/index.php'>Admin
+                                if ($_SESSION['admin']) echo "<li class='divider'></li><li><a href='../../../admin/pages/index.php'>Admin
                                 Console</a></li>";
-                            }else{
+                            } else {
                                 echo "<li><a href='../../login/login.php'>Login</a></li>";
                                 echo "<li><a href='../../user/edit/create.php'>Register</a></li>";
                             }
@@ -150,8 +151,9 @@
                 }
 
                 ?>
+                <span id="errorZone"></span>
 
-                <form method="post" action="../../../php/user/create.php">
+                <form id="js-submit-ajax" method="post" action="">
 
                     <!-- Nav tabs -->
                     <ul class="nav nav-tabs" role="tablist" style="margin-bottom: 20px;">
@@ -263,6 +265,111 @@
 </div>
 
 <script rel="script" type="text/javascript" src="../../../js/logout.js"></script>
+<script>
+    $("document").ready(function () {
+        $("#js-submit-ajax").submit(function () {
+            var data = $(this).serialize();
+            $.ajax({
+                type: "POST",
+                dataType: "html",
+                url: "../../../api/calls/user/registration/register-user.php", //Relative or absolute path to
+                // response.php file
+                data: data,
+                success: function (data) {
+                    console.log(data);
+                    try {
+                        var parsedData = jQuery.parseJSON(data);
+                        if (parsedData.success) {
+                            $("#errorZone").html(
+                                "<div class=\"ui-widget\">" +
+                                "   <div class=\"ui-state-success ui-corner-all\">" +
+                                "       <p class='ui-para-text'><span class=\"ui-icon ui-icon-alert\"></span>" +
+                                "       <strong>Success:</strong>" + "The user was created successfully!" + "</p>" +
+                                "   </div>" +
+                                "</div>");
+                            if (parsedData.mail) {
+                                triggerMailAjax(parsedData.id)
+                            } else {
+                                $("#errorZone").html(
+                                    "<div class=\"ui-widget\">" +
+                                    "   <div class=\"ui-state-error ui-corner-all\">" +
+                                    "       <p class='ui-para-text'><span class=\"ui-icon ui-icon-alert\"></span>" +
+                                    "       <strong>Success:</strong>" + "The user was created successfully but the " +
+                                    "email could not be sent. You will need to contact an admin and get your account " +
+                                    "activated." + "</p>" +
+                                    "   </div>" +
+                                    "</div>");
+                            }
+//                            $("#js-submit-ajax").trigger("reset");
+                        } else {
+                            $("#errorZone").html(
+                                "<div class=\"ui-widget\">" +
+                                "   <div class=\"ui-state-error ui-corner-all\">" +
+                                "       <p class='ui-para-text'><span class=\"ui-icon ui-icon-alert\"></span>" +
+                                "       <strong>Alert:</strong>" + "There was an error registering: " + parsedData
+                                    .error.message + "</p>" +
+                                "   </div>" +
+                                "</div>");
+                        }
+                    } catch (exception) {
+                        console.log(exception);
+                    }
+//                    $("#return").html(
+//                        data.toString()
+//                    );
+//
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.log("Failed: " + jqXHR + ", " + textStatus + ", " + errorThrown);
+                }
+            });
+            return false;
+        });
 
+        function triggerMailAjax(uniqueID) {
+            console.log(uniqueID);
+            $.ajax({
+                type: "POST",
+                dataType: "html",
+                url: "../../../api/calls/user/registration/mail-user.php", //Relative or absolute path to response
+                // .php file
+                data: {
+                    "uid": uniqueID
+                },
+                success: function (data) {
+                    console.log("Success: " + data);
+                    try {
+                        var parsedData = jQuery.parseJSON(data);
+                        if (parsedData.success) {
+                            $("#errorZone").html(
+                                "<div class='ui-widget'>" +
+                                "   <div class='ui-state-success ui-corner-all'>" +
+                                "       <p class='ui-para-text'><span class='ui-icon ui-icon-alert'></span>" +
+                                "       <strong>Success:</strong>" + "The user was emailed successfully!" +
+                                "</p>" +
+                                "   </div>" +
+                                "</div>");
+                        } else {
+                            $("#errorZone").html(
+                                "<div class='ui-widget'>" +
+                                "   <div class='ui-state-error ui-corner-all'>" +
+                                "       <p class='ui-para-text'><span class='ui-icon ui-icon-alert'></span>" +
+                                "       <strong>Alert:</strong>" + "There was an error mailing: " + parsedData
+                                    .error.message + "</p>" +
+                                "   </div>" +
+                                "</div>");
+                        }
+                    } catch (error) {
+                        console.log(error);
+                    }
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.log("Failed: " + jqXHR + ", " + textStatus + ", " + errorThrown);
+                }
+            });
+            console.log("Ajaxed");
+        }
+    });
+</script>
 </body>
 </html>
