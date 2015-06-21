@@ -7,11 +7,10 @@
  */
 
 include_once("Permission.php");
-use \Michelf\Markdown;
+use Michelf\Markdown;
 
-class User
+class User implements \JsonSerializable
 {
-
     /**
      * @var int This stores the database ID of the user.
      */
@@ -88,12 +87,10 @@ class User
      * @var string The users hash containing the hash salt and iterations of their password.
      */
     private $hash;
-
     /**
      * @var string The plaintext copy of their password. This should only be populated from {@link User::createFromID()} on signup.
      */
     private $password;
-
     /**
      * @var array(Permission) The array of permission objects.
      */
@@ -110,18 +107,23 @@ class User
      * @var string the 'decrypted' copy of the users address
      */
     private $decryptedAddress;
-
     /**
-     * @var bool whether the users account is active.
+     * @var int whether the users account is active.
      */
     private $active;
+    /**
+     * @var string The users unique ID to be used during registrations and password resets
+     */
+    private $uniqueID;
+
+    private function __construct()
+    {
+    }
 
     /**
      * The default constructor is set to private so it can't be instantiated from another class.
      */
-    private function __construct()
-    {
-    }
+
 
     /**
      * @param int $id
@@ -177,7 +179,8 @@ class User
         $instance->privateEmail = $record['private_email'];
         $instance->privatePhone = $record['private_phone'];
         $instance->privateAddress = $record['private_address'];
-        $instance->active = $record['active'] == 1;
+        $instance->active = $record['active'];
+        $instance->uniqueID = $record['unique_id'];
 
         $instance = User::generatePermissions($instance, $mysqlConnection);
         $instance = User::stripHTML($instance);
@@ -191,10 +194,52 @@ class User
     }
 
     /**
+     * @param User $instance
+     * @param MySQLConnection $mysqlConnection
+     * @return User
+     */
+    private static function generatePermissions($instance, $mysqlConnection)
+    {
+        $permissionsAsInts = explode(",", $instance->getPermissions());
+        $permissionsAsObjects = array();
+        if ($permissionsAsInts == null || count($permissionsAsInts) <= 0) {
+            $instance->setPermissionsArray(array());
+            return $instance;
+        }
+
+        foreach ($permissionsAsInts as $permission) {
+            $request = Permission::createFromID($permission, $mysqlConnection);
+            if ($request[0]) {
+                array_push($permissionsAsObjects, $request[3]);
+            }
+        }
+
+        $instance->setPermissionsArray($permissionsAsObjects);
+        return $instance;
+    }
+
+    /**
+     * @return string
+     */
+    public function getPermissions()
+    {
+        return $this->permissions;
+    }
+
+    /**
+     * @param string $permissions
+     */
+    public function setPermissions($permissions)
+    {
+        $this->permissions = $permissions;
+    }
+
+    /**
      * @param User $instance The instance of the user class
      * @return User the HTML injection safe instance of the User class
      */
-    private static function stripHTML($instance){
+    private static function stripHTML($instance)
+    {
         $instance->id = htmlentities($instance->id);
         $instance->username = htmlentities($instance->username);
         $instance->nameFirst = htmlentities($instance->nameFirst);
@@ -221,31 +266,92 @@ class User
         return $instance;
     }
 
-
     /**
-     * @param User $instance
+     * @param int $username
      * @param MySQLConnection $mysqlConnection
-     * @return User
+     * @return array
      */
-    private static function generatePermissions($instance, $mysqlConnection){
-        $permissionsAsInts = explode(",", $instance->getPermissions());
-        $permissionsAsObjects = array();
-        if($permissionsAsInts == null || count($permissionsAsInts) <= 0){
-            $instance->setPermissionsArray(array());
-            return $instance;
+    public static function getUserID($username, $mysqlConnection)
+    {
+        if (!$mysqlConnection->getConnected()) {
+            return array(false, $mysqlConnection->getErrorCodes()['ERR_NOT_CONNECTED'], "Not connected", null);
         }
 
-        foreach($permissionsAsInts as $permission){
-            $request = Permission::createFromID($permission, $mysqlConnection);
-            if($request[0]) {
-                array_push($permissionsAsObjects, $request[3]);
-            }
+        $select = "SELECT `id` FROM `users` WHERE `username`=?";
+
+        $preparedStatement = mysqli_prepare($mysqlConnection->getMysqli(), $select);
+        $preparedStatement->bind_param("s", $username);
+
+        $result = $preparedStatement->execute();
+
+        if (!$result) {
+            return array(false, $preparedStatement->errno, $preparedStatement->error, null);
         }
 
-        $instance->setPermissionsArray($permissionsAsObjects);
-        return $instance;
+        $rows = $preparedStatement->get_result();
+
+        if ($rows->num_rows > 1) {
+            return array(false, $mysqlConnection->getErrorCodes()['ERR_TOO_MANY_RESULTS'], "Too many results", null);
+        }
+
+        if ($rows->num_rows == 0) {
+            return array(false, $mysqlConnection->getErrorCodes()['ERR_NO_RESULTS'], "No results", null);
+        }
+
+        $record = $rows->fetch_array(MYSQLI_BOTH);
+        return array(true, 200, "Success", $record['id']);
     }
 
+    /**
+     * This function will create the user from a list of given values
+     * @param string $username
+     * @param string $nameFirst
+     * @param string $nameMiddle
+     * @param string $nameLast
+     * @param string $descriptionPersonal
+     * @param string $descriptionOffer
+     * @param string $descriptionUser
+     * @param string $imageProfile
+     * @param string $imageHeader
+     * @param bool $privateFullName
+     * @param bool $privateEmail
+     * @param bool $privateTelephone
+     * @param bool $privateAddress
+     * @param string $decryptedEmail
+     * @param string $decryptedTelephone
+     * @param string $decryptedAddress
+     * @return User
+     */
+    public static function createFromValues($username, $nameFirst, $nameMiddle, $nameLast, $descriptionPersonal, $descriptionOffer, $descriptionUse, $imageProfile, $imageHeader, $permissions, $privateFullName, $privateEmail, $privatePhone, $privateAddress, $password, $decryptedEmail, $decryptedTelephone, $decryptedAddress, $active, $uniqueID)
+    {
+        $instance = new User();
+        $instance->username = $username;
+        $instance->nameFirst = $nameFirst;
+        $instance->nameMiddle = $nameMiddle;
+        $instance->nameLast = $nameLast;
+        $instance->descriptionPersonal = $descriptionPersonal;
+        $instance->descriptionOffer = $descriptionOffer;
+        $instance->descriptionUse = $descriptionUse;
+        $instance->imageProfile = $imageProfile;
+        $instance->imageHeader = $imageHeader;
+        $instance->permissions = $permissions;
+        $instance->privateFullName = $privateFullName;
+        $instance->privateEmail = $privateEmail;
+        $instance->privatePhone = $privatePhone;
+        $instance->privateAddress = $privateAddress;
+        $instance->password = $password;
+        $instance->decryptedEmail = $decryptedEmail;
+        $instance->decryptedTelephone = $decryptedTelephone;
+        $instance->decryptedAddress = $decryptedAddress;
+        $instance->active = $active;
+        $instance->uniqueID = $uniqueID;
+
+        $obfuscatedData = SecurityUtils::obfuscateUserDetails($instance);
+        $instance->contactEmail = $obfuscatedData[0];
+        $instance->contactAddress = $obfuscatedData[1];
+        $instance->contactTelephone = $obfuscatedData[2];
+        return $instance;
+    }
 
     /**
      * @return int
@@ -261,246 +367,6 @@ class User
     public function setId($id)
     {
         $this->id = $id;
-    }
-
-    /**
-     * @return string
-     */
-    public function getUsername()
-    {
-        return $this->username;
-    }
-
-    /**
-     * @param string $username
-     */
-    public function setUsername($username)
-    {
-        $this->username = $username;
-    }
-
-    /**
-     * @return string
-     */
-    public function getNameFirst()
-    {
-        return $this->nameFirst;
-    }
-
-    /**
-     * @param string $nameFirst
-     */
-    public function setNameFirst($nameFirst)
-    {
-        $this->nameFirst = $nameFirst;
-    }
-
-    /**
-     * @return string
-     */
-    public function getNameMiddle()
-    {
-        return $this->nameMiddle;
-    }
-
-    /**
-     * @param string $nameMiddle
-     */
-    public function setNameMiddle($nameMiddle)
-    {
-        $this->nameMiddle = $nameMiddle;
-    }
-
-    /**
-     * @return string
-     */
-    public function getNameLast()
-    {
-        return $this->nameLast;
-    }
-
-    /**
-     * @param string $nameLast
-     */
-    public function setNameLast($nameLast)
-    {
-        $this->nameLast = $nameLast;
-    }
-
-    /**
-     * @return string
-     */
-    public function getContactEmail()
-    {
-        return $this->contactEmail;
-    }
-
-    /**
-     * @param string $contactEmail
-     */
-    public function setContactEmail($contactEmail)
-    {
-        $this->contactEmail = $contactEmail;
-    }
-
-    /**
-     * @return string
-     */
-    public function getContactTelephone()
-    {
-        return $this->contactTelephone;
-    }
-
-    /**
-     * @param string $contactTelephone
-     */
-    public function setContactTelephone($contactTelephone)
-    {
-        $this->contactTelephone = $contactTelephone;
-    }
-
-    /**
-     * @return string
-     */
-    public function getContactAddress()
-    {
-        return $this->contactAddress;
-    }
-
-    /**
-     * @param string $contactAddress
-     */
-    public function setContactAddress($contactAddress)
-    {
-        $this->contactAddress = $contactAddress;
-    }
-
-    /**
-     * @return string
-     */
-    public function getDescriptionPersonal()
-    {
-        return $this->descriptionPersonal;
-    }
-
-    /**
-     * @param string $descriptionPersonal
-     */
-    public function setDescriptionPersonal($descriptionPersonal)
-    {
-        $this->descriptionPersonal = $descriptionPersonal;
-    }
-
-    /**
-     * @return string
-     */
-    public function getDescriptionOffer()
-    {
-        return $this->descriptionOffer;
-    }
-
-    /**
-     * @param string $descriptionOffer
-     */
-    public function setDescriptionOffer($descriptionOffer)
-    {
-        $this->descriptionOffer = $descriptionOffer;
-    }
-
-    /**
-     * @return string
-     */
-    public function getDescriptionUse()
-    {
-        return $this->descriptionUse;
-    }
-
-    /**
-     * @param string $descriptionUse
-     */
-    public function setDescriptionUse($descriptionUse)
-    {
-        $this->descriptionUse = $descriptionUse;
-    }
-
-    /**
-     * @return string
-     */
-    public function getImageProfile()
-    {
-        return $this->imageProfile;
-    }
-
-    /**
-     * @param string $imageProfile
-     */
-    public function setImageProfile($imageProfile)
-    {
-        $this->imageProfile = $imageProfile;
-    }
-
-    /**
-     * @return string
-     */
-    public function getImageHeader()
-    {
-        return $this->imageHeader;
-    }
-
-    /**
-     * @param string $imageHeader
-     */
-    public function setImageHeader($imageHeader)
-    {
-        $this->imageHeader = $imageHeader;
-    }
-
-    /**
-     * @return bool
-     */
-    public function isPrivateFullName()
-    {
-        return $this->privateFullName;
-    }
-
-    /**
-     * @param bool $privateFullName
-     */
-    public function setPrivateFullName($privateFullName)
-    {
-        $this->privateFullName = $privateFullName;
-    }
-
-    /**
-     * @return bool
-     */
-    public function isPrivateEmail()
-    {
-        return $this->privateEmail;
-    }
-
-    /**
-     * @param bool $privateEmail
-     */
-    public function setPrivateEmail($privateEmail)
-    {
-        $this->privateEmail = $privateEmail;
-    }
-
-    /**
-     * @return bool
-     */
-    public function isPrivatePhone()
-    {
-        return $this->privatePhone;
-    }
-
-    /**
-     * @param bool $privatePhone
-     */
-    public function setPrivatePhone($privatePhone)
-    {
-        $this->privatePhone = $privatePhone;
     }
 
     /**
@@ -570,15 +436,49 @@ class User
     /**
      * @return string
      */
-    public function getRealUserProfile(){
+    public function getRealUserProfile()
+    {
         return $this->getImageProfile() == null ? "/CHG/res/images/base/user/profile.png" : $this->getImageProfile();
     }
 
     /**
      * @return string
      */
-    public function getRealUserHeader(){
+    public function getImageProfile()
+    {
+        return $this->imageProfile;
+    }
+
+    /**
+     * @param string $imageProfile
+     */
+    public function setImageProfile($imageProfile)
+    {
+        $this->imageProfile = $imageProfile;
+    }
+
+    /**
+     * @return string
+     */
+    public function getRealUserHeader()
+    {
         return $this->getImageHeader() == null ? "/CHG/res/images/base/user/header.png" : $this->getImageHeader();
+    }
+
+    /**
+     * @return string
+     */
+    public function getImageHeader()
+    {
+        return $this->imageHeader;
+    }
+
+    /**
+     * @param string $imageHeader
+     */
+    public function setImageHeader($imageHeader)
+    {
+        $this->imageHeader = $imageHeader;
     }
 
     /**
@@ -598,26 +498,11 @@ class User
     }
 
     /**
-     * @return string
-     */
-    public function getPassword()
-    {
-        return $this->password;
-    }
-
-    /**
-     * @param string $password
-     */
-    public function setPassword($password)
-    {
-        $this->password = $password;
-    }
-
-    /**
      * @param MySQLConnection $mysqlConnection
      * @return array
      */
-    public function insertUserIntoDatabase($mysqlConnection){
+    public function insertUserIntoDatabase($mysqlConnection)
+    {
         if (!$mysqlConnection->getConnected()) {
             return array(false, $mysqlConnection->getErrorCodes()['ERR_NOT_CONNECTED'], "Not connected");
         }
@@ -645,101 +530,227 @@ VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? );";
     }
 
     /**
-     * @param int $username
-     * @param MySQLConnection $mysqlConnection
-     * @return array
+     * @return string
      */
-    public static function getUserID($username, $mysqlConnection){
-        if (!$mysqlConnection->getConnected()) {
-            return array(false, $mysqlConnection->getErrorCodes()['ERR_NOT_CONNECTED'], "Not connected", null);
-        }
-
-        $select = "SELECT `id` FROM `users` WHERE `username`=?";
-
-        $preparedStatement = mysqli_prepare($mysqlConnection->getMysqli(), $select);
-        $preparedStatement->bind_param("s", $username);
-
-        $result = $preparedStatement->execute();
-
-        if (!$result) {
-            return array(false, $preparedStatement->errno, $preparedStatement->error, null);
-        }
-
-        $rows = $preparedStatement->get_result();
-
-        if ($rows->num_rows > 1) {
-            return array(false, $mysqlConnection->getErrorCodes()['ERR_TOO_MANY_RESULTS'], "Too many results", null);
-        }
-
-        if($rows->num_rows == 0){
-            return array(false, $mysqlConnection->getErrorCodes()['ERR_NO_RESULTS'], "No results", null);
-        }
-
-        $record = $rows->fetch_array(MYSQLI_BOTH);
-        return array(true, 200, "Success", $record['id']);
+    public function getContactAddress()
+    {
+        return $this->contactAddress;
     }
 
     /**
-     * This function will create the user from a list of given values
-     * @param string $username
-     * @param string $nameFirst
-     * @param string $nameMiddle
-     * @param string $nameLast
-     * @param string $descriptionPersonal
-     * @param string $descriptionOffer
-     * @param string $descriptionUser
-     * @param string $imageProfile
-     * @param string $imageHeader
-     * @param bool $privateFullName
-     * @param bool $privateEmail
-     * @param bool $privateTelephone
-     * @param bool $privateAddress
-     * @param string $decryptedEmail
-     * @param string $decryptedTelephone
-     * @param string $decryptedAddress
-     * @return User
+     * @param string $contactAddress
      */
-    public static function createFromValues($username, $nameFirst, $nameMiddle, $nameLast, $descriptionPersonal, $descriptionOffer, $descriptionUser, $imageProfile, $imageHeader, $privateFullName, $privateEmail, $privateTelephone, $privateAddress, $decryptedEmail, $decryptedTelephone, $decryptedAddress)
+    public function setContactAddress($contactAddress)
     {
-        $instance = new User();
-        $instance->username = $username;
-        $instance->nameFirst = $nameFirst;
-        $instance->nameMiddle = $nameMiddle;
-        $instance->nameLast = $nameLast;
-        $instance->descriptionPersonal = $descriptionPersonal;
-        $instance->descriptionOffer = $descriptionOffer;
-        $instance->descriptionUse = $descriptionUser;
-        $instance->imageProfile = $imageProfile;
-        $instance->imageHeader = $imageHeader;
-        $instance->privateFullName = $privateFullName;
-        $instance->privateEmail = $privateEmail;
-        $instance->privatePhone = $privateTelephone;
-        $instance->privateAddress = $privateAddress;
-        $instance->decryptedEmail = $decryptedEmail;
-        $instance->decryptedTelephone = $decryptedTelephone;
-        $instance->decryptedAddress = $decryptedAddress;
-
-        $obfuscatedData = SecurityUtils::obfuscateUserDetails($instance);
-        $instance->contactEmail = $obfuscatedData[0];
-        $instance->contactAddress = $obfuscatedData[1];
-        $instance->contactTelephone = $obfuscatedData[2];
-        return $instance;
+        $this->contactAddress = $contactAddress;
     }
 
     /**
      * @return string
      */
-    public function getPermissions()
+    public function getContactEmail()
     {
-        return $this->permissions;
+        return $this->contactEmail;
     }
 
     /**
-     * @param string $permissions
+     * @param string $contactEmail
      */
-    public function setPermissions($permissions)
+    public function setContactEmail($contactEmail)
     {
-        $this->permissions = $permissions;
+        $this->contactEmail = $contactEmail;
+    }
+
+    /**
+     * @return string
+     */
+    public function getContactTelephone()
+    {
+        return $this->contactTelephone;
+    }
+
+    /**
+     * @param string $contactTelephone
+     */
+    public function setContactTelephone($contactTelephone)
+    {
+        $this->contactTelephone = $contactTelephone;
+    }
+
+    /**
+     * @return string
+     */
+    public function getDescriptionOffer()
+    {
+        return $this->descriptionOffer;
+    }
+
+    /**
+     * @param string $descriptionOffer
+     */
+    public function setDescriptionOffer($descriptionOffer)
+    {
+        $this->descriptionOffer = $descriptionOffer;
+    }
+
+    /**
+     * @return string
+     */
+    public function getDescriptionPersonal()
+    {
+        return $this->descriptionPersonal;
+    }
+
+    /**
+     * @param string $descriptionPersonal
+     */
+    public function setDescriptionPersonal($descriptionPersonal)
+    {
+        $this->descriptionPersonal = $descriptionPersonal;
+    }
+
+    /**
+     * @return string
+     */
+    public function getDescriptionUse()
+    {
+        return $this->descriptionUse;
+    }
+
+    /**
+     * @param string $descriptionUse
+     */
+    public function setDescriptionUse($descriptionUse)
+    {
+        $this->descriptionUse = $descriptionUse;
+    }
+
+    /**
+     * @return string
+     */
+    public function getNameFirst()
+    {
+        return $this->nameFirst;
+    }
+
+    /**
+     * @param string $nameFirst
+     */
+    public function setNameFirst($nameFirst)
+    {
+        $this->nameFirst = $nameFirst;
+    }
+
+    /**
+     * @return string
+     */
+    public function getNameLast()
+    {
+        return $this->nameLast;
+    }
+
+    /**
+     * @param string $nameLast
+     */
+    public function setNameLast($nameLast)
+    {
+        $this->nameLast = $nameLast;
+    }
+
+    /**
+     * @return string
+     */
+    public function getNameMiddle()
+    {
+        return $this->nameMiddle;
+    }
+
+    /**
+     * @param string $nameMiddle
+     */
+    public function setNameMiddle($nameMiddle)
+    {
+        $this->nameMiddle = $nameMiddle;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isPrivateEmail()
+    {
+        return $this->privateEmail;
+    }
+
+    /**
+     * @param bool $privateEmail
+     */
+    public function setPrivateEmail($privateEmail)
+    {
+        $this->privateEmail = $privateEmail;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isPrivateFullName()
+    {
+        return $this->privateFullName;
+    }
+
+    /**
+     * @param bool $privateFullName
+     */
+    public function setPrivateFullName($privateFullName)
+    {
+        $this->privateFullName = $privateFullName;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isPrivatePhone()
+    {
+        return $this->privatePhone;
+    }
+
+    /**
+     * @param bool $privatePhone
+     */
+    public function setPrivatePhone($privatePhone)
+    {
+        $this->privatePhone = $privatePhone;
+    }
+
+    /**
+     * @return string
+     */
+    public function getUsername()
+    {
+        return $this->username;
+    }
+
+    /**
+     * @param string $username
+     */
+    public function setUsername($username)
+    {
+        $this->username = $username;
+    }
+
+    /**
+     * @return string
+     */
+    public function getPassword()
+    {
+        return $this->password;
+    }
+
+    /**
+     * @param string $password
+     */
+    public function setPassword($password)
+    {
+        $this->password = $password;
     }
 
     /**
@@ -759,9 +770,9 @@ VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? );";
     }
 
     /**
-     * @return boolean
+     * @return int
      */
-    public function isActive()
+    public function getActive()
     {
         return $this->active;
     }
@@ -774,6 +785,27 @@ VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? );";
         $this->active = $active;
     }
 
+    /**
+     * @return string
+     */
+    public function getUniqueID()
+    {
+        return $this->uniqueID;
+    }
 
+    /**
+     * @param string $uniqueID
+     */
+    public function setUniqueID($uniqueID)
+    {
+        $this->uniqueID = $uniqueID;
+    }
+
+    public function JsonSerialize()
+    {
+        $vars = get_object_vars($this);
+
+        return $vars;
+    }
 
 }

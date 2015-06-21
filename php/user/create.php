@@ -13,7 +13,6 @@ include_once("../mysql/MySQLConnection.php");
 include_once("../variables/User.php");
 include_once("../security/SecurityUtils.php");
 include_once("../../res/libraries/Michelf/Markdown.inc.php");
-
 //region MySQL Connection creation and connection.
 //Connect to the MySQL server.
 $mysqlConnection = MySQLConnection::createDefault("../../");
@@ -98,7 +97,6 @@ if(!isset($_POST['userImageHeader']) || $_POST['userImageHeader'] == ''){
 $detailsArray = array();
 
 //Account active *
-
 //region Active account and force flag checking
 if(isset($_POST['force'])){
     if (!isset($_SESSION['user-id']) || !isset($_SESSION['agent']) || !isset($_SESSION['count']) ||
@@ -127,7 +125,7 @@ if(isset($_POST['force'])){
     }
     array_push($detailsArray, 1);
 }else{
-    array_push($detailsArray, 0);
+    array_push($detailsArray, 2);
 }
 //endregion
 
@@ -135,15 +133,18 @@ if(isset($_POST['force'])){
 if(!isset($_POST['userContactAddress']) || $_POST['userContactAddress'] == ''){
     array_push($detailsArray, null);
 }else{
-    array_push($detailsArray, $_POST['userContactAddress']);
+    array_push($detailsArray, SecurityUtils::obfuscateString(SecurityUtils::generateSaltFS($_POST['userUsername'],
+            $_POST['userFirstName'], $_POST['userLastName']) . $_POST['userContactAddress']));
 }
 //Users email address *
-array_push($detailsArray, $_POST['userContactEmail']);
+array_push($detailsArray, SecurityUtils::obfuscateString(SecurityUtils::generateSaltFS($_POST['userUsername'],
+        $_POST['userFirstName'], $_POST['userLastName']) . $_POST['userContactEmail']));
 //Phone number contact info
 if(!isset($_POST['userContactPhone']) || $_POST['userContactPhone'] == ''){
     array_push($detailsArray, null);
 }else{
-    array_push($detailsArray, $_POST['userContactPhone']);
+    array_push($detailsArray, SecurityUtils::obfuscateString(SecurityUtils::generateSaltFS($_POST['userUsername'],
+            $_POST['userFirstName'], $_POST['userLastName']) . $_POST['userContactPhone']));
 }
 //Offer description
 if(!isset($_POST['userDescriptionOffer']) || $_POST['userDescriptionOffer'] == ''){
@@ -207,20 +208,24 @@ if(!isset($_POST['userContactPhonePrivate']) || $_POST['userContactPhonePrivate'
 }
 //Username
 array_push($detailsArray, $_POST['userUsername']);
+//Unique ID
+$uid = SecurityUtils::generateID(10);
+array_push($detailsArray, $uid);
 //endregion
 
 
 //region SQL Generation
 $sql = "INSERT INTO `users` ( `active`, `contact_address`, `contact_email`, `contact_telephone`, `description_offer`,
  `description_personal`, `description_use`, `hash`, `image_header`, `image_profile`, `name_first`, `name_last`, 
- `name_middle`, `permissions`, `private_address`, `private_email`, `private_full_name`, `private_phone`, `username`) 
- VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? );";
+ `name_middle`, `permissions`, `private_address`, `private_email`, `private_full_name`, `private_phone`, `username`,
+ `unique_id`) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? );";
 $stmt = $mysqlConnection->getMysqli()->prepare($sql);
 //endregion
 
 //region SQL Parameter Binding
 /* Bind parameters. Types: s = string, i = integer, d = double,  b = blob */
-$a_param_type = array("i", "s", "s", "s", "s", "s", "s", "s", "s", "s", "s", "s", "s", "s", "i", "i", "i", "i", "s");
+$a_param_type = array("i", "s", "s", "s", "s", "s", "s", "s", "s", "s", "s", "s", "s", "s", "i", "i", "i", "i", "s",
+    "s");
 $a_params = array();
 
 $param_type = '';
@@ -252,7 +257,79 @@ if(!$result){
 //region Success code
 $_SESSION['success'] = "You have successfully registered. An email will be sent to you shortly with an confirmation
 link. You will not be able to log in until you verify. If you can't find the email check your spam folder.";
-redirect(null, false, "../../pages/gathering/gathering.php");
+
+$sql = "SELECT * FROM `users` WHERE `unique_id`=?;";
+$stmt = $mysqlConnection->getMysqli()->prepare($sql);
+$stmt->bind_param("s", $uid);
+
+$result = $stmt->execute();
+if (!$result) {
+    redirect("here was an error sending the confirmation email. Please contact an admin to get your account
+    activated and inform them that there was an error executing the select query with the following details: Error:
+    [" . $stmt->errno . "] " . $stmt->error . ". Please try again later.", true);
+    return;
+}
+
+$records = $stmt->get_result();
+if ($records->num_rows > 1) {
+    redirect("There was an error sending the confirmation email. Please contact an admin to get your account
+    activated and inform them that the amount of rows for the UNIQUE-ID was greater than 1");
+    return;
+}
+
+if ($records->num_rows == 0) {
+    redirect("There was an error sending the confirmation email. Please contact an admin to get your account
+    activated and inform them that the amount of rows for the UNIQUE-ID was 0.");
+    return;
+}
+
+$row = $records->fetch_array(MYSQLI_NUM)[0];
+$name = $row['name_first'];
+$server = $_SERVER['SERVER_NAME'];
+$email = SecurityUtils::deobfuscateString($row['contact-email']);
+
+//TODO(ryan <vitineth@gmail.com>):Update details to Cheltenham Hackspace Details
+require '../../res/libraries/vendor/phpmailer/phpmailer/PHPMailerAutoload.php';
+
+$path = "../../lockedres/auth/stmp-details.txt";
+$fileData = fread(fopen($path, "r"), filesize($path));
+$data = explode("\n", $fileData);
+
+$mail = new PHPMailer();
+$mail->isSMTP();                                      // Set mailer to use SMTP
+$mail->Host = $data[0];  // Specify main and backup SMTP servers
+$mail->SMTPAuth = true;                               // Enable SMTP authentication
+$mail->Username = $data[1];               // SMTP username
+$mail->Password = $data[2];                     // SMTP password
+$mail->SMTPSecure = 'tls';                            // Enable TLS encryption, `ssl` also accepted
+$mail->Port = $data[3];                                    // TCP port to connect to
+
+$mail->From = 'gathering@cheltenhamhackspace.org';
+$mail->FromName = 'Ryan';
+$mail->addAddress('vitineth@gmail.com', 'Ryan Delaney');     // Add a recipient
+$mail->addReplyTo('hello@cheltenhamhackspace.org', 'Cheltenham Hackspace');
+
+$mail->isHTML(true);                                  // Set email format to HTML
+
+$mail->Subject = 'Gathering Registration';
+$mail->Body = 'Hello ' . $name . ', <br>&nbsp;&nbsp;&nbsp;&nbsp;Thank you for your registration to Cheltenham
+Hackspace Gatherings. Please click the link below to complete your registration:<br><br>' . $server .
+    '/CHG/php/mail/finalize .php?id=' . $uid . '<br>If you didn\'t request this application then please disregard
+this message. ';
+$mail->AltBody = 'Hello ' . $name . ', \n\tThank you for your registration to Cheltenham Hackspace Gatherings.
+Please click the link below to complete your registration:\n\n' . $server . '/CHG/php/mail/finalize
+.php?id=' . $uid . '\n\nIf you didn\'t request this application then please disregard this message. ';
+
+if (!$mail->send()) {
+    redirect("There was an error when trying to send the email. Please contact an admin to get your account activated
+     and tell them the following information: Mailer Error: " . $mail->ErrorInfo);
+    return;
+} else {
+    $_SESSION['success'] = "An email has been sent to " . $email . ". Please click the link in that email to confirm
+    your account.";
+    redirect(null);
+    return;
+}
 //endregion
 
 function redirect($error, $refer = false, $address = "../../pages/user/edit/create.php", $replace = true, $code = 303)
