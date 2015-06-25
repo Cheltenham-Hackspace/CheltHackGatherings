@@ -97,12 +97,19 @@
     //We need SecurityUtils as we use it to check whether a user has the correct permission easily.
     include_once("../../php/variables/Gathering.php");
     include_once("../../php/variables/User.php");
+    include_once("../../php/Utils.php");
     include_once("../../php/security/SecurityUtils.php");
     include_once("../../php/mysql/GatheringMySQLConnection.php");
     include_once("../../res/libraries/Michelf/Markdown.inc.php");
 
     //Connect to the database with a GatheringMySQLConnection so we can access the Gathering exclusive methods.
     $mysqlConnection = GatheringMySQLConnection::createDefault("../../");
+    if ($mysqlConnection === false) {
+        echo "<section>";
+        echo "Authenticating the database connection failed. Please try again later but if the problem persists then
+        inform an admin.";
+        echo "</section>";
+    }
     //Then connect to the database.
     $connectionResult = $mysqlConnection->connect();
 
@@ -139,15 +146,21 @@
     //the file as read only as we will never need to open them. Using the just opened file, read in the file and close
     //it.
 
-    $sectionFileName = "../../res/templates/gatherings/section_template.txt";
-    $sectionFileObject = fopen($sectionFileName, "r");
-    $sectionTemplate = fread($sectionFileObject, filesize($sectionFileName));
-    fclose($sectionFileObject);
+    $sectionFileTemplate = Utils::correctlyLoadFile("../../res/templates/gatherings/section_template.txt");
+    if (is_array($sectionFileTemplate) && !$sectionFileTemplate[0]) {
+        echo "<section>";
+        echo "There was an error loading this page: " . $sectionFileTemplate[1];
+        echo "</section>";
+        return;
+    }
 
-    $userFileName = "../../res/templates/gatherings/user/user_template.txt";
-    $userFileObject = fopen($userFileName, "r");
-    $userTemplate = fread($userFileObject, filesize($userFileName));
-    fclose($userFileObject);
+    $userTemplate = Utils::correctlyLoadFile("../../res/templates/gatherings/user/user_template.txt");
+    if (is_array($userTemplate) && !$userTemplate[0]) {
+        echo "<section>";
+        echo "There was an error loading this page: " . $sectionFileTemplate[1];
+        echo "</section>";
+        return;
+    }
 
     //We can tell whether a user is logged in through checking whether the 'user' value is set in the session. As users
     //cannot alter their sessions this is secure.
