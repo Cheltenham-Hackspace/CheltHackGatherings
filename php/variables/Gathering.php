@@ -22,6 +22,7 @@ class Gathering
     private $name;
     private $notAttending;
     private $occurring;
+    private $concluding;
 
     private $attendingUserList;
     private $notAttendingUserList;
@@ -33,7 +34,9 @@ class Gathering
     {
     }
 
-    public static function createFromValues($acceptTimeout, $active, $attending, $created, $createdBy, $description, $id, $locationAddress, $locationLatitude, $locationLongitude, $name, $notAttending, $occurring)
+    public static function createFromValues($acceptTimeout, $active, $attending, $created, $createdBy, $description,
+                                            $id, $locationAddress, $locationLatitude, $locationLongitude, $name,
+                                            $notAttending, $occurring, $concluding)
     {
         $instance = new Gathering();
 
@@ -50,6 +53,7 @@ class Gathering
         $instance->name = $name;
         $instance->notAttending = $notAttending;
         $instance->occurring = $occurring;
+        $instance->concluding = $concluding;
 
         return $instance;
     }
@@ -136,6 +140,7 @@ class Gathering
         $instance->name = \Michelf\Markdown::defaultTransform($record['name']);
         $instance->notAttending = $record['not_attending'];
         $instance->occurring = $record['occurring'];
+        $instance->concluding = $record['concluding'];
 
         $instance = Gathering::generateUserList($instance, $mysqlConnection);
 
@@ -479,6 +484,23 @@ class Gathering
     {
         $this->notAttendingUserList = $notAttendingUserList;
     }
+
+    /**
+     * @return mixed
+     */
+    public function getConcluding()
+    {
+        return $this->concluding;
+    }
+
+    /**
+     * @param mixed $concluding
+     */
+    public function setConcluding($concluding)
+    {
+        $this->concluding = $concluding;
+    }
+
 
 
 }
