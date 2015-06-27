@@ -23,6 +23,7 @@ class Gathering
     private $notAttending;
     private $occurring;
     private $concluding;
+    private $recurring;
 
     private $attendingUserList;
     private $notAttendingUserList;
@@ -36,7 +37,7 @@ class Gathering
 
     public static function createFromValues($acceptTimeout, $active, $attending, $created, $createdBy, $description,
                                             $id, $locationAddress, $locationLatitude, $locationLongitude, $name,
-                                            $notAttending, $occurring, $concluding)
+                                            $notAttending, $occurring, $concluding, $recurring)
     {
         $instance = new Gathering();
 
@@ -54,6 +55,7 @@ class Gathering
         $instance->notAttending = $notAttending;
         $instance->occurring = $occurring;
         $instance->concluding = $concluding;
+        $instance->recurring = $recurring;
 
         return $instance;
     }
@@ -141,6 +143,7 @@ class Gathering
         $instance->notAttending = $record['not_attending'];
         $instance->occurring = $record['occurring'];
         $instance->concluding = $record['concluding'];
+        $instance->recurring = $record['recurring'];
 
         $instance = Gathering::generateUserList($instance, $mysqlConnection);
 
@@ -501,6 +504,25 @@ class Gathering
         $this->concluding = $concluding;
     }
 
+    /**
+     * @return mixed
+     */
+    public function getRecurring()
+    {
+        return $this->recurring;
+    }
 
+    /**
+     * @param mixed $recurring
+     */
+    public function setRecurring($recurring)
+    {
+        $this->recurring = $recurring;
+    }
+
+    public function doesRecur()
+    {
+        return $this->getRecurring() !== null;
+    }
 
 }

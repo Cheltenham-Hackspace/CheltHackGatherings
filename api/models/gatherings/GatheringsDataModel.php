@@ -60,7 +60,8 @@ class GatheringsDataModel extends DatabaseModel
                 $row['name'],
                 $row['not_attending'],
                 $row['occurring'],
-                $row['concludes']
+                $row['concludes'],
+                $row['recurring']
             );
 
             array_push($gatherings, $gathering);
@@ -74,7 +75,7 @@ class GatheringsDataModel extends DatabaseModel
         //List of allowed columns. There could be a better way to do this but for now I am going to leave it.
         //TODO Research better ways of doing this.
         $columns = array('accept_timeout', 'active', 'attending', 'created', 'created_by', 'description', 'id',
-            'location_address', 'location_latitude', 'location_longitude', 'name', 'not_attending', 'occurring');
+            'location_address', 'location_latitude', 'location_longitude', 'name', 'not_attending', 'occurring', 'recurring');
 
         $conditions = $this->filterExplicitHashData($conditions, $columns);
 
@@ -128,7 +129,8 @@ class GatheringsDataModel extends DatabaseModel
                 $row['name'],
                 $row['not_attending'],
                 $row['occurring'],
-                $row['concludes']
+                $row['concludes'],
+                $row['recurring']
             );
 
             array_push($gatherings, $gathering);
@@ -203,7 +205,8 @@ class GatheringsDataModel extends DatabaseModel
             $row['name'],
             $row['not_attending'],
             $row['occurring'],
-            $row['concludes']
+            $row['concludes'],
+            $row['recurring']
         );
 
         return $gathering;
@@ -215,7 +218,7 @@ class GatheringsDataModel extends DatabaseModel
     {
         $columns = array("accept_timeout", "active", "attending", "concludes", "created", "created_by",
             "description", "id", "location_address", "location_latitude", "location_longitude", "name",
-            "not_attending", "occurring");
+            "not_attending", "occurring", "recurring");
 
         $conditions = $this->filterExplicitHashData($data, $columns);
         //If the number of conditions is 0 after we remove malicious ones
@@ -262,8 +265,8 @@ class GatheringsDataModel extends DatabaseModel
     {
         $insert = "INSERT INTO `" . mysqli_real_escape_string($this->getMysqli(), $table) . "` ( `accept_timeout`,
         `active`, `attending`, `concludes`, `created`, `created_by`, `description`, `location_address`,
-        `location_latitude`, `location_longitude`, `name`, `not_attending`, `occurring`) VALUES ( ?, ?, ?, ?, ?, ?,
-        ?, ?, ?, ?, ?, ?, ? );";
+        `location_latitude`, `location_longitude`, `name`, `not_attending`, `occurring`, `recurring`) VALUES ( ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?, ?, ?, ? );";
 
         $stmt = $this->getMysqli()->prepare($insert);
         if ($stmt === false) {
@@ -274,7 +277,7 @@ class GatheringsDataModel extends DatabaseModel
             return false;
         }
 
-        $bind = $stmt->bind_param("iisiiissssssi",
+        $bind = $stmt->bind_param("iisiiissssssis",
             $gathering->getAcceptTimeout(),
             $gathering->getActive(),
             $gathering->getAttending(),
@@ -287,7 +290,8 @@ class GatheringsDataModel extends DatabaseModel
             $gathering->getLocationLongitude(),
             $gathering->getName(),
             $gathering->getNotAttending(),
-            $gathering->getOccurring()
+            $gathering->getOccurring(),
+            $gathering->getRecurring()
         );
 
         if (!$bind) {
@@ -306,6 +310,42 @@ class GatheringsDataModel extends DatabaseModel
          information: <br>Code: " . $stmt->errno . ".<br>Error: '" . $stmt->error . "'.");
             $this->setError("ERR-STATEMENT-EXECUTE-FAILED");
         }
+        return $result;
+    }
+    //endregion
+
+    //region UPDATE BASED QUERIES
+    public function updateGathering($updates, $conditions, $table)
+    {
+        //List of allowed columns. There could be a better way to do this but for now I am going to leave it.
+        //TODO Research better ways of doing this.
+        $columns = array("accept_timeout", "active", "attending", "concludes", "created", "created_by",
+            "description", "id", "location_address", "location_latitude", "location_longitude", "name",
+            "not_attending", "occurring", "recurring");
+
+        $conditions = $this->filterExplicitHashData($conditions, $columns);
+        $updates = $this->filterExplicitHashData($updates, $columns);
+
+        //If the number of conditions is 0 after we remove malicious ones
+        if (count($conditions) == 0) {
+            //Then just return an empty array
+            return false;
+        }
+
+        //If the number of conditions is 0 after we remove malicious ones
+        if (count($updates) == 0) {
+            //Then just return an empty array
+            return false;
+        }
+
+        $base = "UPDATE `" . mysqli_real_escape_string($this->getMysqli(), $table) . "` SET %1 WHERE %2;";
+        $stmt = $this->bindArrayBasedParamsTwice($updates, $conditions, $base);
+
+        if ($stmt === false) return false;
+
+        /** @var $stmt mysqli_stmt */
+        $result = $stmt->execute();
+        if (!$result) $this->setError("ERR-STATEMENT-EXECUTE-FAILED");
         return $result;
     }
     //endregion
