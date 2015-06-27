@@ -2,7 +2,7 @@
 A replacement for meetups.com for Cheltenham Hackspace.
 
 ## Origin
-As it currently stands (as of 14/06/2015) meetups.com charges for their service. That service is the ability to setup and manage 'meetups' of people for a common cause or interest. The price is not that expensive but for a Hackspace just starting out it would be nicer to cut down on costs that are not completly nessisary. 
+As it currently stands (as of 14/06/2015) meetups.com charges for their service. That service is the ability to setup and manage 'meetups' of people for a common cause or interest. The price is not that expensive but for a Hackspace just starting out it would be nicer to cut down on costs that are not completely necessary. 
 
 That's were this idea came from.
 
@@ -22,19 +22,19 @@ This repo does not contain a couple of files. This means that you cannot clone i
 - [x] View gatherings
  
 ## What can't it do
-- [ ] Allow recurring events
+- [ ] ~~Allow recurring events~~
 - [ ] Allow updates to gatherings
 - [ ] Allow viewing of notifications in Admin Console
 - [ ] Allow viewing of timeline table in Admin Console
 - [ ] Allow editing of user profile
 - [ ] Send out registration emails (and without them being marked as spam)
 - [ ] Send out gathering announcements
-- [ ] Allow activation of accounts from email link
+- [ ] ~~Allow activation of accounts from email link~~
 - [ ] Handle any form of error well.
 
 ## To-Do (in order of significance)
 - [ ] Add error checking and handling
-- [ ] Add recurring events
+- [x] Add recurring events
 - [ ] Add profile changes
 - [x] Add registration emails
 - [ ] Add gathering updates

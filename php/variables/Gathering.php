@@ -22,6 +22,8 @@ class Gathering
     private $name;
     private $notAttending;
     private $occurring;
+    private $concluding;
+    private $recurring;
 
     private $attendingUserList;
     private $notAttendingUserList;
@@ -33,7 +35,9 @@ class Gathering
     {
     }
 
-    public static function createFromValues($acceptTimeout, $active, $attending, $created, $createdBy, $description, $id, $locationAddress, $locationLatitude, $locationLongitude, $name, $notAttending, $occurring)
+    public static function createFromValues($acceptTimeout, $active, $attending, $created, $createdBy, $description,
+                                            $id, $locationAddress, $locationLatitude, $locationLongitude, $name,
+                                            $notAttending, $occurring, $concluding, $recurring)
     {
         $instance = new Gathering();
 
@@ -50,6 +54,8 @@ class Gathering
         $instance->name = $name;
         $instance->notAttending = $notAttending;
         $instance->occurring = $occurring;
+        $instance->concluding = $concluding;
+        $instance->recurring = $recurring;
 
         return $instance;
     }
@@ -136,6 +142,8 @@ class Gathering
         $instance->name = \Michelf\Markdown::defaultTransform($record['name']);
         $instance->notAttending = $record['not_attending'];
         $instance->occurring = $record['occurring'];
+        $instance->concluding = $record['concluding'];
+        $instance->recurring = $record['recurring'];
 
         $instance = Gathering::generateUserList($instance, $mysqlConnection);
 
@@ -480,5 +488,41 @@ class Gathering
         $this->notAttendingUserList = $notAttendingUserList;
     }
 
+    /**
+     * @return mixed
+     */
+    public function getConcluding()
+    {
+        return $this->concluding;
+    }
+
+    /**
+     * @param mixed $concluding
+     */
+    public function setConcluding($concluding)
+    {
+        $this->concluding = $concluding;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getRecurring()
+    {
+        return $this->recurring;
+    }
+
+    /**
+     * @param mixed $recurring
+     */
+    public function setRecurring($recurring)
+    {
+        $this->recurring = $recurring;
+    }
+
+    public function doesRecur()
+    {
+        return $this->getRecurring() !== null;
+    }
 
 }

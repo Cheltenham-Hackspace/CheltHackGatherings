@@ -19,6 +19,7 @@ class GatheringMySQLConnection extends MySQLConnection
     public static function createDefault($depthToGlobal)
     {
         $dbDetails = SecurityUtils::getDatabaseDetails($depthToGlobal);
+        if ($dbDetails === false) return false;
         return new GatheringMySQLConnection($dbDetails[0], $dbDetails[1], $dbDetails[2], $dbDetails[3]);
     }
 

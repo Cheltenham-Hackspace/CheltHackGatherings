@@ -11,8 +11,6 @@ class UserDataModel extends DatabaseModel
 
 
     //region SELECT BASED QUERIES
-
-
     public function getAllUsers()
     {
         $sql = "SELECT * FROM `users`;";
@@ -79,52 +77,77 @@ class UserDataModel extends DatabaseModel
         return $users;
     }
 
-    /**
-     * @param User $instance
-     * @param mysqli $mysqli
-     * @return User
-     */
-    private function generatePermissions($instance, $mysqli)
+    public function getUserByID($id)
     {
-        $permissionsAsInts = explode(",", $instance->getPermissions());
-        $permissionsAsObjects = array();
-        if ($permissionsAsInts == null || count($permissionsAsInts) <= 0) {
-            $instance->setPermissionsArray(array());
-            return $instance;
+        $sql = "SELECT * FROM `users` WHERE `id`=?;";
+        $stmt = $this->getMysqli()->prepare($sql);
+
+        if ($stmt === false) {
+            $this->setError("ERR-STATEMENT-PREPARE-FAILED");
+            return false;
         }
 
-        foreach ($permissionsAsInts as $permission) {
-            $sql = "SELECT * FROM `permissions` WHERE `id`=?;";
-            $stmt = $mysqli->prepare($sql);
-            if ($stmt === false) {
-                continue;
-            }
-
-            if ($stmt->bind_param("i", $permission) === false) {
-                continue;
-            }
-
-            $result = $stmt->execute();
-            if (!$result) {
-                continue;
-            }
-
-            $records = $stmt->get_result();
-            if ($records === false) {
-                continue;
-            }
-
-            $row = $records->fetch_array(MYSQLI_BOTH);
-            if ($row == null) {
-                continue;
-            }
-
-            $perm = Permission::createFromValues($row['id'], $row['name'], $row['description']);
-            array_push($permissionsAsObjects, $perm);
+        if ($stmt->bind_param("i", $id) === false) {
+            $this->setError("ERR-STATEMENT-BIND-FAILED");
+            return false;
         }
 
-        $instance->setPermissionsArray($permissionsAsObjects);
-        return $instance;
+        $result = $stmt->execute();
+
+        if ($result === false) {
+            $this->setError("MQI:[" . $stmt->errno . "]: " . $stmt->error);
+            return false;
+        }
+
+        $records = $stmt->get_result();
+
+        if ($records === false) {
+            $this->setCustomError("When trying to get the result of the query the server encountered an error.
+         Please try again later. If the error persists please report it to the webmaster and supply the following
+         information: <br>Code: " . $stmt->errno . ".<br>Error: '" . $stmt->error . "'.");
+            $this->setError("ERR-STATEMENT-RESULT-FAILED");
+            return false;
+        }
+
+        if ($records->num_rows == 1) {
+            $row = $records->fetch_array();
+            $user = User::createFromValues(
+                $row['username'],
+                $row['name_first'],
+                $row['name_middle'],
+                $row['name_last'],
+                $row['description_personal'],
+                $row['description_offer'],
+                $row['description_use'],
+                $row['image_profile'],
+                $row['image_header'],
+                $row['permissions'],
+                $row['private_full_name'],
+                $row['private_email'],
+                $row['private_phone'],
+                $row['private_address'],
+                null,
+                SecurityUtils::deobfuscateString($row['contact_email']),
+                SecurityUtils::deobfuscateStringComplete($row['contact_telephone'], $row['username'], $row['name_first'],
+                    $row['name_last']),
+                SecurityUtils::deobfuscateStringComplete($row['contact_address'], $row['username'], $row['name_first'],
+                    $row['name_last']),
+                $row['active'],
+                $row['unique_id']
+            );
+            $user->setId($row['id']);
+            $user->setContactEmail($row['contact_email']);
+            $user->setContactTelephone($row['contact_telephone']);
+            $user->setContactAddress($row['contact_address']);
+            $user->setHash($row['hash']);
+            return $this->generatePermissions($user, $this->getMysqli());
+        } else {
+            $this->setCustomError("When executing the query not enough or too many results were returned by the
+            server. This is usually due to the ID of a user not existing. Please try again later. If the problem
+            persists please report it to the webmaster.");
+            $this->setError("ERR-CUSTOM-RESULT-SET-INVALID-COUNT");
+            return false;
+        }
     }
 
     public function getUsers($conditions)
@@ -208,84 +231,54 @@ class UserDataModel extends DatabaseModel
         }
 
         return $users;
-        //endregion
     }
-
     //endregion
 
     //region INSERT BASED QUERIES
-
-    public function getUserByID($id)
+    public function createUserFromDetails($data)
     {
-        $sql = "SELECT * FROM `users` WHERE `id`=?;";
-        $stmt = $this->getMysqli()->prepare($sql);
+        //List of allowed columns. There could be a better way to do this but for now I am going to leave it.
+        //TODO Research better ways of doing this.
+        $columns = array("active", "contact_address", "contact_email", "contact_telephone", "description_offer",
+            "description_personal", "description_use", "hash", "id", "image_header", "image_profile", "name_first",
+            "name_last", "name_middle", "permissions", "private_address", "private_email", "private_full_name",
+            "private_phone", "unique_id", "username");
+
+        $conditions = $this->filterExplicitHashData($data, $columns);
+        //If the number of conditions is 0 after we remove malicious ones
+        if (count($conditions) == 0) {
+            $this->setError("ERR-CUSTOM-FILTER-NO-CONDITIONS");
+            //Then just return an empty array
+            return false;
+        }
+
+        $fieldsString = "";
+        $keys = array_keys($data);
+        for ($i = 0; $i < count($keys); $i++) {
+            $fieldsString .= "`" . $keys[$i] . "`, ";
+        }
+        $fieldsString = substr($fieldsString, 0, strlen($fieldsString) - 2);
+
+        $base = "INSERT INTO `users` (" . $fieldsString . ") VALUES (";
+        $stmt = $this->bindArrayBasedParamsWithAppend($data, $base, "?, ", 2, ");");
 
         if ($stmt === false) {
+            $this->setCustomError("When trying to prepare the query the server encountered an error.
+         Please try again later. If the error persists please report it to the webmaster and supply the following
+         information: <br>Code: " . $this->getMysqli()->errno . ".<br>Error: '" . $this->getMysqli()->error . "'.");
             $this->setError("ERR-STATEMENT-PREPARE-FAILED");
             return false;
         }
 
-        if ($stmt->bind_param("i", $id) === false) {
-            $this->setError("ERR-STATEMENT-BIND-FAILED");
-            return false;
-        }
-
+        /** @var $stmt mysqli_stmt */
         $result = $stmt->execute();
-
-        if ($result === false) {
-            $this->setError("MQI:[" . $stmt->errno . "]: " . $stmt->error);
-            return false;
-        }
-
-        $records = $stmt->get_result();
-
-        if ($records === false) {
-            $this->setCustomError("When trying to get the result of the query the server encountered an error.
+        if (!$result) {
+            $this->setCustomError("When trying to execute the query the server encountered an error.
          Please try again later. If the error persists please report it to the webmaster and supply the following
          information: <br>Code: " . $stmt->errno . ".<br>Error: '" . $stmt->error . "'.");
-            $this->setError("ERR-STATEMENT-RESULT-FAILED");
-            return false;
+            $this->setError("ERR-STATEMENT-EXECUTE-FAILED");
         }
-
-        if ($records->num_rows == 1) {
-            $row = $records->fetch_array();
-            $user = User::createFromValues(
-                $row['username'],
-                $row['name_first'],
-                $row['name_middle'],
-                $row['name_last'],
-                $row['description_personal'],
-                $row['description_offer'],
-                $row['description_use'],
-                $row['image_profile'],
-                $row['image_header'],
-                $row['permissions'],
-                $row['private_full_name'],
-                $row['private_email'],
-                $row['private_phone'],
-                $row['private_address'],
-                null,
-                SecurityUtils::deobfuscateString($row['contact_email']),
-                SecurityUtils::deobfuscateStringComplete($row['contact_telephone'], $row['username'], $row['name_first'],
-                    $row['name_last']),
-                SecurityUtils::deobfuscateStringComplete($row['contact_address'], $row['username'], $row['name_first'],
-                    $row['name_last']),
-                $row['active'],
-                $row['unique_id']
-            );
-            $user->setId($row['id']);
-            $user->setContactEmail($row['contact_email']);
-            $user->setContactTelephone($row['contact_telephone']);
-            $user->setContactAddress($row['contact_address']);
-            $user->setHash($row['hash']);
-            return $this->generatePermissions($user, $this->getMysqli());
-        } else {
-            $this->setCustomError("When executing the query not enough or too many results were returned by the
-            server. This is usually due to the ID of a user not existing. Please try again later. If the problem
-            persists please report it to the webmaster.");
-            $this->setError("ERR-CUSTOM-RESULT-SET-INVALID-COUNT");
-            return false;
-        }
+        return $result;
     }
 
     /**
@@ -343,60 +336,9 @@ VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? );";
         //Otherwise return true with a success message.
         return true;
     }
-
     //endregion
 
     //region UPDATE BASED QUERIES
-
-    public function createUserFromDetails($data)
-    {
-        //List of allowed columns. There could be a better way to do this but for now I am going to leave it.
-        //TODO Research better ways of doing this.
-        $columns = array("active", "contact_address", "contact_email", "contact_telephone", "description_offer",
-            "description_personal", "description_use", "hash", "id", "image_header", "image_profile", "name_first",
-            "name_last", "name_middle", "permissions", "private_address", "private_email", "private_full_name",
-            "private_phone", "unique_id", "username");
-
-        $conditions = $this->filterExplicitHashData($data, $columns);
-        //If the number of conditions is 0 after we remove malicious ones
-        if (count($conditions) == 0) {
-            $this->setError("ERR-CUSTOM-FILTER-NO-CONDITIONS");
-            //Then just return an empty array
-            return false;
-        }
-
-        $fieldsString = "";
-        $keys = array_keys($data);
-        for ($i = 0; $i < count($keys); $i++) {
-            $fieldsString .= "`" . $keys[$i] . "`, ";
-        }
-        $fieldsString = substr($fieldsString, 0, strlen($fieldsString) - 2);
-
-        $base = "INSERT INTO `users` (" . $fieldsString . ") VALUES (";
-        $stmt = $this->bindArrayBasedParamsWithAppend($data, $base, "?, ", 2, ");");
-
-        if ($stmt === false) {
-            $this->setCustomError("When trying to prepare the query the server encountered an error.
-         Please try again later. If the error persists please report it to the webmaster and supply the following
-         information: <br>Code: " . $this->getMysqli()->errno . ".<br>Error: '" . $this->getMysqli()->error . "'.");
-            $this->setError("ERR-STATEMENT-PREPARE-FAILED");
-            return false;
-        }
-
-        /** @var $stmt mysqli_stmt */
-        $result = $stmt->execute();
-        if (!$result) {
-            $this->setCustomError("When trying to execute the query the server encountered an error.
-         Please try again later. If the error persists please report it to the webmaster and supply the following
-         information: <br>Code: " . $stmt->errno . ".<br>Error: '" . $stmt->error . "'.");
-            $this->setError("ERR-STATEMENT-EXECUTE-FAILED");
-        }
-        return $result;
-    }
-    //endregion
-
-    //region DELETE BASED QUERIES
-
     public function updateUser($updates, $conditions)
     {
         //List of allowed columns. There could be a better way to do this but for now I am going to leave it.
@@ -433,8 +375,7 @@ VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? );";
     }
     //endregion
 
-    //region UTILITY FUNCTIONS
-
+    //region DELETE BASED QUERIES
     public function deleteUsers($conditions)
     {
         //List of allowed columns. There could be a better way to do this but for now I am going to leave it.
@@ -478,7 +419,57 @@ VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? );";
 
         return true;
     }
+    //endregion
 
+    //region UTILITY FUNCTIONS
+
+    /**
+     * @param User $instance
+     * @param mysqli $mysqli
+     * @return User
+     */
+    private function generatePermissions($instance, $mysqli)
+    {
+        $permissionsAsInts = explode(",", $instance->getPermissions());
+        $permissionsAsObjects = array();
+        if ($permissionsAsInts == null || count($permissionsAsInts) <= 0) {
+            $instance->setPermissionsArray(array());
+            return $instance;
+        }
+
+        foreach ($permissionsAsInts as $permission) {
+            $sql = "SELECT * FROM `permissions` WHERE `id`=?;";
+            $stmt = $mysqli->prepare($sql);
+            if ($stmt === false) {
+                continue;
+            }
+
+            if ($stmt->bind_param("i", $permission) === false) {
+                continue;
+            }
+
+            $result = $stmt->execute();
+            if (!$result) {
+                continue;
+            }
+
+            $records = $stmt->get_result();
+            if ($records === false) {
+                continue;
+            }
+
+            $row = $records->fetch_array(MYSQLI_BOTH);
+            if ($row == null) {
+                continue;
+            }
+
+            $perm = Permission::createFromValues($row['id'], $row['name'], $row['description']);
+            array_push($permissionsAsObjects, $perm);
+        }
+
+        $instance->setPermissionsArray($permissionsAsObjects);
+        return $instance;
+    }
 
     //endregion
 }
