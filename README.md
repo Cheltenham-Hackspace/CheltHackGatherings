@@ -42,6 +42,7 @@ This repo does not contain a couple of files. This means that you cannot clone i
 - [ ] Add timeline table in Admin Console
 - [ ] Add notifications in Admin Console
 - [ ] Commenting section on gathering.
+- [ ] Add a cron based mail scheduler. 
 
 ## How to use
 ### Registration
